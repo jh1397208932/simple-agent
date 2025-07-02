@@ -17,6 +17,7 @@ import (
 	"os/signal"
 	"path/filepath"
 	"runtime"
+	"sort"
 	"strings"
 	"sync"
 	"syscall"
@@ -340,7 +341,7 @@ func sendPostSseToUrl(url string, cmd string) {
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
 	go func() {
 		<-sigChan
-		log.Println("接收到终止信号，关闭连接...")
+		//log.Println("接收到终止信号，关闭连接...")
 		cancel()
 		client.Close()
 	}()
@@ -546,7 +547,7 @@ func main() {
 
 	//开始解析json 参数检查
 	for k1, v1 := range jsonObject {
-		fmt.Printf("配置服务: %s \n", k1)
+		//fmt.Printf("配置服务: %s \n", k1)
 		serviceNameSlice = append(serviceNameSlice, k1)
 		if v1.Ip == nil || len(v1.Ip) == 0 {
 			//未配置ip地址
@@ -569,87 +570,109 @@ func main() {
 		}
 
 	}
-	fmt.Println("=========service===============")
-	fmt.Println(serviceNameSlice)
-	fmt.Println("=========service===============")
-
-	var selectedService []string
-	prompt := &survey.MultiSelect{
-		Message: "请选择需要执行的服务:",
-		Options: serviceNameSlice,
-	}
-	survey.AskOne(prompt, &selectedService)
-	// fmt.Println("======选择了======")
-	// for _, val := range selectedService {
-	// 	fmt.Println(val)
-	// }
-	// fmt.Println("=================")
-	prompt2 := &survey.Select{
-		Message: "请再次确认需要是否正确:",
-		Options: []string{"正确", "错误"},
-	}
-	var yesOrNoSelect string
-	survey.AskOne(prompt2, &yesOrNoSelect)
-	// fmt.Println("======选择了======")
-	// fmt.Println(yesOrNoSelect)
-	// fmt.Println("=================")
-	if "错误" == yesOrNoSelect {
-		panic("输入错误 程序结束")
-	}
-	fmt.Println("===================开始自动执行===================")
-	for _, selectServiceItem := range selectedService {
-		fmt.Printf("=============服务 %s 开始执行自动流程==========", selectServiceItem)
-		sf := jsonObject[selectServiceItem]
-		//ip := sf.Ip
-		for _, flowItem := range sf.Flow {
-			switch flowItem.Type {
-			case "localCmd":
-				fmt.Printf("-----------------------------开始本机执行命令---------------\n")
-				fmt.Printf("命令为: %s", flowItem.Data)
-				//执行本机命令
-				RunLocalCmd(flowItem.Data)
-				fmt.Printf("-------本机命令执行结束--------\n")
-			case "up":
-				fmt.Println("---------------------------开始上传文件-------------------------\n")
-				//上传本地文件到远端目录
-				for _, ip := range sf.Ip {
-					fmt.Printf("ip: %s 开始上传文件 从本机: %s  to  远端: %s\n", ip, flowItem.Data, flowItem.Data2)
-					fmt.Println()
-					result, err := streamUploadWithParams(fmt.Sprintf("%s/i/file/uploadToPathReplace", ip), flowItem.Data, map[string]string{"toFilePath": flowItem.Data2})
-					fmt.Println()
-					if err != nil {
-						fmt.Printf("ip: %s 上传失败原因为: %s \n", ip, err.Error())
-					}
-					if result.Code != 200 {
-						fmt.Printf("ip: %s 执行失败原因为 %s \n", ip, result.Message)
-					}
-					fmt.Printf("ip: %s 上传文件结束\n", ip)
-					fmt.Println()
-					fmt.Println()
-				}
-				//uploadFile(fmt.Sprintf("%s/i/file/uploadToPathReplace"), flowItem.Data, flowItem.Data2)
-				fmt.Println("-------上传文件结束-----------\n")
-			case "cmd":
-				fmt.Println("-------------------------开始执行远端命令-----------\n")
-				//执行远程命令
-				for _, ip := range sf.Ip {
-					fmt.Printf("*********ip: %s 开始执行命令: %s **********\n", ip, flowItem.Data)
-					fmt.Println()
-					sendPostSseToUrl(fmt.Sprintf("%s/i/cmd/executeCmdSse", ip), flowItem.Data)
-					fmt.Println()
-					fmt.Printf("***ip: %s 执行命令结束 ******8\n", ip)
-					fmt.Println()
-					fmt.Println()
-				}
-				fmt.Println("------执行远端命令结束-----------\n")
-			default:
-				fmt.Println("无效指令类型\n")
+	sort.Strings(serviceNameSlice)
+	var isFirst bool = true
+	for {
+		if !isFirst {
+			outSelect := &survey.Select{
+				Message: "退出还是继续",
+				Options: []string{"继续", "不继续"},
+			}
+			var outSelecta string
+			survey.AskOne(outSelect, &outSelecta)
+			if "不继续" == outSelecta {
+				os.Exit(0)
 			}
 		}
-		fmt.Printf("=============服务 %s 自动流程结束==========", selectServiceItem)
+		isFirst = false
+		//fmt.Println("=========service===============")
+		//fmt.Println(serviceNameSlice)
+		//fmt.Println("=========service===============")
+
+		var selectedService []string
+		prompt := &survey.MultiSelect{
+			Message: "请选择需要执行的服务:",
+			Options: serviceNameSlice,
+		}
+		survey.AskOne(prompt, &selectedService)
+		// fmt.Println("======选择了======")
+		// for _, val := range selectedService {
+		// 	fmt.Println(val)
+		// }
+		// fmt.Println("=================")
+		prompt2 := &survey.Select{
+			Message: "请再次确认需要是否正确:",
+			Options: []string{"正确", "错误"},
+		}
+		var yesOrNoSelect string
+		survey.AskOne(prompt2, &yesOrNoSelect)
+		// fmt.Println("======选择了======")
+		// fmt.Println(yesOrNoSelect)
+		// fmt.Println("=================")
+		if yesOrNoSelect == "错误" {
+			fmt.Println("选择错误 重新选择")
+			continue
+		}
+		if len(selectedService) == 0 {
+			fmt.Println("未选择服务 无法执行")
+			continue
+		}
+		fmt.Println("===================开始自动执行===================")
+
+		for _, selectServiceItem := range selectedService {
+			fmt.Printf("=============服务 %s 开始执行自动流程==========", selectServiceItem)
+			sf := jsonObject[selectServiceItem]
+			//ip := sf.Ip
+			for _, flowItem := range sf.Flow {
+				switch flowItem.Type {
+				case "localCmd":
+					fmt.Printf("-----------------------------开始本机执行命令---------------\n")
+					fmt.Printf("命令为: %s", flowItem.Data)
+					//执行本机命令
+					RunLocalCmd(flowItem.Data)
+					fmt.Printf("-------本机命令执行结束--------\n")
+				case "up":
+					fmt.Println("---------------------------开始上传文件-------------------------\n")
+					//上传本地文件到远端目录
+					for _, ip := range sf.Ip {
+						fmt.Printf("ip: %s 开始上传文件 从本机: %s  to  远端: %s\n", ip, flowItem.Data, flowItem.Data2)
+						fmt.Println()
+						result, err := streamUploadWithParams(fmt.Sprintf("%s/i/file/uploadToPathReplace", ip), flowItem.Data, map[string]string{"toFilePath": flowItem.Data2})
+						fmt.Println()
+						if err != nil {
+							fmt.Printf("ip: %s 上传失败原因为: %s \n", ip, err.Error())
+						}
+						if result.Code != 200 {
+							fmt.Printf("ip: %s 执行失败原因为 %s \n", ip, result.Message)
+						}
+						fmt.Printf("ip: %s 上传文件结束\n", ip)
+						fmt.Println()
+						fmt.Println()
+					}
+					//uploadFile(fmt.Sprintf("%s/i/file/uploadToPathReplace"), flowItem.Data, flowItem.Data2)
+					fmt.Println("-------上传文件结束-----------\n")
+				case "cmd":
+					fmt.Println("-------------------------开始执行远端命令-----------\n")
+					//执行远程命令
+					for _, ip := range sf.Ip {
+						fmt.Printf("*********ip: %s 开始执行命令: %s **********\n", ip, flowItem.Data)
+						fmt.Println()
+						sendPostSseToUrl(fmt.Sprintf("%s/i/cmd/executeCmdSse", ip), flowItem.Data)
+						fmt.Println()
+						fmt.Printf("***ip: %s 执行命令结束 ******8\n", ip)
+						fmt.Println()
+						fmt.Println()
+					}
+					fmt.Println("------执行远端命令结束-----------\n")
+				default:
+					fmt.Println("无效指令类型\n")
+				}
+			}
+			fmt.Printf("=============服务 %s 自动流程结束==========", selectServiceItem)
+		}
+
 	}
-	for {
-	}
+
 }
 
 func uploadFile(url, filePath, toFilePath string) (Resp, error) {
