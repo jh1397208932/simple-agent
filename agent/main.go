@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 
 	"github.com/gin-gonic/gin"
@@ -57,6 +58,12 @@ func main() {
 	// 		param.Path,     // 请求路径
 	// 	)
 	// }))
+	var aesKey string
+	flag.StringVar(&aesKey, "aesKey", "", "aes密码")
+	flag.Parse()
+	cmdParamFlagMap := map[string]string{
+		"aesKey": aesKey}
+	router.InitMiddlewareRegister(g, cmdParamFlagMap)
 	router.InitRouter(g) // 初始化路由组
 	// router.GET("/health", func(c *gin.Context) {
 	// 	c.JSON(http.StatusOK, gin.H{

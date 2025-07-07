@@ -32,12 +32,37 @@
 * 安装golang
 * (可选) 安装交叉编译依赖库 在lib.mac.arm文件夹中
 * (可选) 编译平台依赖库 配置环境变量
-
-#### cgo编译
+#### agent端
+ cgo编译
 ```sh
-    CGO_ENABLED=1 GOOS=linux GOARCH=amd64 CC=x86_64-unknown-linux-musl-gcc go build -o target/test_linux_x86_64 main.go
+   CGO_ENABLED=1 GOOS=linux GOARCH=amd64 CC=x86_64-unknown-linux-musl-gcc go build -o target/simple_ag_v2_linux_x86_64 main.go
 ```
-#### 关闭cgo编译
+ 关闭cgo编译
 ```sh
-    GOOS=linux GOARCH=amd64 go build -o target/test_linux_x86_64 main.go
+    CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o target/simple-agent-v2-linux-x86_64 main.go
+```
+#### client
+windows
+```sh
+GOOS=windows GOARCH=amd64 go build -o target/windows3.exe main.go
+```
+
+#### 常用架构编译参数
+```sh
+# 编译 Windows 64 位程序 (.exe)
+GOOS=windows GOARCH=amd64 go build -o output.exe
+
+# 编译 Windows 32 位程序
+GOOS=windows GOARCH=386 go build -o output32.exe
+
+# 编译 Linux 64 位
+GOOS=linux GOARCH=amd64 go build -o output-linux
+
+# 编译 macOS Intel 芯片
+GOOS=darwin GOARCH=amd64 go build -o output-mac-intel
+
+# 编译 macOS Apple Silicon
+GOOS=darwin GOARCH=arm64 go build -o output-mac-m1
+
+
 ```

@@ -1,27 +1,102 @@
 package middleware
 
 import (
-	"crypto/aes"
-	"crypto/cipher"
-	"encoding/base64"
-	"errors"
-	"strings"
+	"bufio"
+	"net"
+	"net/http"
+
+	"github.com/jhUtil/simple-agent-go/internal/util/encodingutil"
 
 	"github.com/gin-gonic/gin"
 )
 
-var AesKey string
+var AesPassword []byte = []byte("meiyoumima")
+var AesKey = []byte("*1'Z;XLCZ(*^#^@*()212oawePJ[,23]")
 
-func AuthMiddleware(aesKey string) gin.HandlerFunc {
-	AesKey = aesKey
+type nullResponseWriter struct {
+	gin.ResponseWriter
+}
+
+func (w *nullResponseWriter) Write(data []byte) (int, error) {
+	return 0, nil
+}
+
+func (w *nullResponseWriter) WriteHeader(statusCode int) {
+	// 完全不做任何操作
+}
+
+func (w *nullResponseWriter) Header() http.Header {
+	return make(http.Header) // 返回空header
+}
+func AuthMiddleware(aesPassword string) gin.HandlerFunc {
+	if aesPassword != "" {
+		AesPassword = []byte(aesPassword)
+	}
 	return func(c *gin.Context) {
 		// 1. 获取加密token
-		authHeader := c.GetHeader("Authorization")
+		authHeader := c.GetHeader("Auth")
 		if authHeader == "" {
-			c.AbortWithStatusJSON(401, gin.H{"error": "未提供认证信息"})
+			//c.Writer = &nullResponseWriter{ResponseWriter: c.Writer}
+			noResponse(c)
+			//c.Abort()
+			return
+		}
+		//判断aes凭据
+		decoAuthHead, err := encodingutil.AesDecryptGCM(authHeader, AesKey)
+		if err != nil {
+			//c.Writer = &nullResponseWriter{ResponseWriter: c.Writer}
+			//c.Abort()
+			noResponse(c)
+			return
+		}
+		if string(decoAuthHead) == string(AesPassword) {
+			c.Next()
+		} else {
+			//c.Writer = &nullResponseWriter{ResponseWriter: c.Writer}
+			noResponse(c)
+			//c.Abort()
 			return
 		}
 
-		c.Next()
 	}
+}
+
+type hijackWriter struct {
+	gin.ResponseWriter
+	conn net.Conn
+}
+
+func (w *hijackWriter) Write(data []byte) (int, error) {
+	return 0, nil // 丢弃所有写入
+}
+
+func (w *hijackWriter) WriteHeader(code int) {
+	// 禁止写入状态码
+}
+
+func (w *hijackWriter) Hijack() (net.Conn, *bufio.ReadWriter, error) {
+	return w.conn, nil, nil
+}
+
+func noResponse(c *gin.Context) {
+	// 1. 获取底层TCP连接
+	hj, ok := c.Writer.(http.Hijacker)
+	if !ok {
+		return
+	}
+
+	conn, _, err := hj.Hijack()
+	if err != nil {
+		return
+	}
+
+	// 2. 替换Writer并立即关闭连接
+	c.Writer = &hijackWriter{
+		ResponseWriter: c.Writer,
+		conn:           conn,
+	}
+
+	// 3. 直接关闭连接（无任何响应）
+	conn.Close()
+	c.Abort()
 }

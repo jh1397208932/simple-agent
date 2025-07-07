@@ -4,6 +4,10 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"crypto/aes"
+	"crypto/cipher"
+	"crypto/rand"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -326,9 +330,15 @@ func (c *SSEClient) Reconnect(ctx context.Context) error {
 }
 
 func sendPostSseToUrl(url string, cmd string) {
+	auth, err := AesEncryptGCM(AesPassword, AesKey)
+	if err != nil {
+		fmt.Println("创建密钥失败")
+		return
+	}
+	//req.Header.Set("Auth", auth)
 	// 创建客户端
 	client := NewSSEClient("http://" + url)
-
+	client.headers = map[string]string{"Auth": auth}
 	// 添加表单参数
 	client.AddFormParam("command", cmd)
 
@@ -341,7 +351,7 @@ func sendPostSseToUrl(url string, cmd string) {
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
 	go func() {
 		<-sigChan
-		//log.Println("接收到终止信号，关闭连接...")
+		log.Println("接收到终止信号，关闭连接...")
 		cancel()
 		client.Close()
 	}()
@@ -675,6 +685,9 @@ func main() {
 
 }
 
+var AesPassword []byte = []byte("meiyoumima")
+var AesKey = []byte("*1'Z;XLCZ(*^#^@*()212oawePJ[,23]")
+
 func uploadFile(url, filePath, toFilePath string) (Resp, error) {
 	var result Resp
 	// 打开文件
@@ -783,6 +796,11 @@ func streamUploadWithParams(url, filePath string, params map[string]string) (Res
 
 	// 设置Content-Type头
 	req.Header.Set("Content-Type", writer.FormDataContentType())
+	auth, err := AesEncryptGCM(AesPassword, AesKey)
+	if err != nil {
+		return result, fmt.Errorf("创建鉴权token失败: %v", err)
+	}
+	req.Header.Set("Auth", auth)
 
 	// 发送请求
 	client := &http.Client{}
@@ -801,4 +819,50 @@ func streamUploadWithParams(url, filePath string, params map[string]string) (Res
 	fmt.Printf("响应状态: %d\n响应内容: %s\n", resp.StatusCode, body)
 	json.Unmarshal(body, &result)
 	return result, nil
+}
+
+func AesEncryptGCM(plaintext, key []byte) (string, error) {
+	block, err := aes.NewCipher(key)
+	if err != nil {
+		return "", err
+	}
+
+	gcm, err := cipher.NewGCM(block)
+	if err != nil {
+		return "", err
+	}
+
+	nonce := make([]byte, gcm.NonceSize())
+	if _, err = io.ReadFull(rand.Reader, nonce); err != nil {
+		return "", err
+	}
+
+	ciphertext := gcm.Seal(nonce, nonce, plaintext, nil)
+	return base64.StdEncoding.EncodeToString(ciphertext), nil
+}
+
+func AesDecryptGCM(ciphertext string, key []byte) ([]byte, error) {
+	block, err := aes.NewCipher(key)
+	if err != nil {
+		return nil, err
+	}
+
+	gcm, err := cipher.NewGCM(block)
+	if err != nil {
+		return nil, err
+	}
+
+	decoded, err := base64.StdEncoding.DecodeString(ciphertext)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(decoded) < gcm.NonceSize() {
+		return nil, errors.New("密文太短")
+	}
+
+	nonce := decoded[:gcm.NonceSize()]
+	decoded = decoded[gcm.NonceSize():]
+
+	return gcm.Open(nil, nonce, decoded, nil)
 }

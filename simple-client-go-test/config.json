@@ -1,6 +1,36 @@
 {
+        "flow-service_xc_dev_idc": {
+        "ip": [
+            "10.180.23.87:31000",
+            "10.180.23.88:31000"
+        ],
+        "flow": [
+            {
+                "type": "localCmd",
+                "data": "cd /Users/jiahe/workspace/flow-service/ && git checkout xc_dev_idc"
+            },
+            {
+                "type": "localCmd",
+                "data": "cd /Users/jiahe/workspace/flow-service/ && /Users/jiahe/ruanjian/apache-maven-3.8.4-tt/bin/mvn clean package -DskipTests -s /Users/jiahe/ruanjian/apache-maven-3.8.4-tt/conf/settings.xml"
+            },
+            {
+                "type": "up",
+                "data": "/Users/jiahe/workspace/flow-service/target/flow-service-2.0.1.jar",
+                "data2": "/app/service/flow-service-2.0.1.jar"
+            },
+            {
+                "type": "cmd",
+                "data": "java -version"
+            },
+            {
+                "type": "cmd",
+                "data": "/app/service/deploy.sh flow 2.0.1"
+            }
+        ]
+    },
     "build-service_xc_dev_idc": {
         "ip": [
+            
             "10.180.23.82:31000",
             "10.180.23.83:31000"
         ],
@@ -181,6 +211,23 @@
             {
                 "type": "localCmd",
                 "data": "java -version"
+            },
+                        {
+                "type": "cmd",
+                "data": "pwd"
+            }
+        ]
+    }
+    ,
+        "ls-test": {
+        "ip": [
+            "10.180.23.87:31000",
+            "10.180.23.88:31000"
+        ],
+        "flow": [
+            {
+                "type": "cmd",
+                "data": "ls -lts /app/service/"
             }
         ]
     }
