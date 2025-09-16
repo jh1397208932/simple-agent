@@ -41,6 +41,7 @@ func (w *SSEWriter) WriteEvent(eventName, data string) error {
 
 	// 写入响应
 	_, err := w.c.Writer.WriteString(sb.String())
+
 	if err != nil {
 		return err
 	}

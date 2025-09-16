@@ -2,8 +2,10 @@ package middleware
 
 import (
 	"bufio"
+	"fmt"
 	"net"
 	"net/http"
+	"strconv"
 
 	"github.com/jhUtil/simple-agent-go/internal/util/encodingutil"
 
@@ -12,6 +14,7 @@ import (
 
 var AesPassword []byte = []byte("meiyoumima")
 var AesKey = []byte("*1'Z;XLCZ(*^#^@*()212oawePJ[,23]")
+var HmacKey = "tesw-dadad0-pm2-pp9"
 
 type nullResponseWriter struct {
 	gin.ResponseWriter
@@ -35,17 +38,32 @@ func AuthMiddleware(aesPassword string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// 1. 获取加密token
 		authHeader := c.GetHeader("Auth")
-		if authHeader == "" {
+		timestamp, err := strconv.ParseInt(c.GetHeader("Timestamp"), 10, 64)
+		nonce := c.GetHeader("Nonce")
+		signature := c.GetHeader("Signature")
+		fmt.Printf("timestamp:%d nonce:%s signature:%s", timestamp, nonce, signature)
+		if err != nil || authHeader == "" || signature == "" || nonce == "" {
 			//c.Writer = &nullResponseWriter{ResponseWriter: c.Writer}
+			fmt.Println("鉴权不通过3")
 			noResponse(c)
 			//c.Abort()
 			return
 		}
+		isValid := encodingutil.VerifyHMACSignature(timestamp, nonce, signature, authHeader, HmacKey, int64(300))
+
+		if !isValid {
+
+			fmt.Println("鉴权不通过1")
+			noResponse(c)
+			return
+		}
+
 		//判断aes凭据
 		decoAuthHead, err := encodingutil.AesDecryptGCM(authHeader, AesKey)
 		if err != nil {
 			//c.Writer = &nullResponseWriter{ResponseWriter: c.Writer}
 			//c.Abort()
+			fmt.Println("鉴权不通4")
 			noResponse(c)
 			return
 		}
@@ -53,6 +71,7 @@ func AuthMiddleware(aesPassword string) gin.HandlerFunc {
 			c.Next()
 		} else {
 			//c.Writer = &nullResponseWriter{ResponseWriter: c.Writer}
+			fmt.Println("鉴权不通过5")
 			noResponse(c)
 			//c.Abort()
 			return
@@ -79,6 +98,7 @@ func (w *hijackWriter) Hijack() (net.Conn, *bufio.ReadWriter, error) {
 }
 
 func noResponse(c *gin.Context) {
+	fmt.Printf("鉴权不通过22")
 	// 1. 获取底层TCP连接
 	hj, ok := c.Writer.(http.Hijacker)
 	if !ok {

@@ -1,0 +1,274 @@
+{
+            "execute-service_xc_dev_idc": {
+        "ip": [
+            "10.180.23.92:31000"
+        ],
+        "flow": [
+
+            {
+                "type": "up",
+                "data": "/Users/jiahe/workspace/executor-service/target/executor-service-2.0.1.jar",
+                "data2": "/app/service/executor-service-3.0.2.jar"
+            },
+            {
+                "type": "cmd",
+                "data": "java -version"
+            },
+            {
+                "type": "cmd",
+                "data": "/app/service/deploy17.sh executor 3.0.2"
+            },
+                        {
+                "type": "cmd",
+                "data": "ps -ef |grep executor"
+            }
+        ]
+    },
+        "flow-service_xc_dev_idc": {
+        "ip": [
+            "10.180.23.87:31000",
+            "10.180.23.88:31000"
+        ],
+        "flow": [
+            {
+                "type": "localCmd",
+                "data": "cd /Users/jiahe/workspace/flow-service/ && git checkout xc_dev_idc"
+            },
+            {
+                "type": "localCmd",
+                "data": "cd /Users/jiahe/workspace/flow-service/ && /Users/jiahe/ruanjian/apache-maven-3.8.4-tt/bin/mvn clean package -DskipTests -s /Users/jiahe/ruanjian/apache-maven-3.8.4-tt/conf/settings.xml"
+            },
+            {
+                "type": "up",
+                "data": "/Users/jiahe/workspace/flow-service/target/flow-service-2.0.1.jar",
+                "data2": "/app/service/flow-service-2.0.1.jar"
+            },
+            {
+                "type": "cmd",
+                "data": "java -version"
+            },
+            {
+                "type": "cmd",
+                "data": "/app/service/deploy.sh flow 2.0.1"
+            }
+        ]
+    },
+    "build-service_xc_dev_idc": {
+        "ip": [
+            
+            "10.180.23.82:31000",
+            "10.180.23.83:31000"
+        ],
+        "flow": [
+            {
+                "type": "localCmd",
+                "data": "cd /Users/jiahe/workspace/build-service/ && git checkout xc_dev_idc"
+            },
+            {
+                "type": "localCmd",
+                "data": "cd /Users/jiahe/workspace/build-service/ && /Users/jiahe/ruanjian/apache-maven-3.8.4-tt/bin/mvn clean package -DskipTests -s /Users/jiahe/ruanjian/apache-maven-3.8.4-tt/conf/settings.xml"
+            },
+            {
+                "type": "up",
+                "data": "/Users/jiahe/workspace/build-service/target/build-service-2.0.1.jar",
+                "data2": "/app/service/build-service-2.0.1.jar"
+            },
+            {
+                "type": "cmd",
+                "data": "java -version"
+            },
+            {
+                "type": "cmd",
+                "data": "/app/service/deploy.sh build 2.0.1"
+            }
+        ]
+    },
+    "document-service_xc_dev_idc": {
+        "ip": [
+            "10.180.23.84:31000",
+            "10.180.23.85:31000"
+        ],
+        "flow": [
+            {
+                "type": "localCmd",
+                "data": "cd /Users/jiahe/workspace/document-service/ && git checkout xc_dev_idc"
+            },
+            {
+                "type": "localCmd",
+                "data": "cd /Users/jiahe/workspace/document-service/ && /Users/jiahe/ruanjian/apache-maven-3.8.4-tt/bin/mvn clean package -DskipTests -s /Users/jiahe/ruanjian/apache-maven-3.8.4-tt/conf/settings.xml"
+            },
+            {
+                "type": "up",
+                "data": "/Users/jiahe/workspace/document-service/target/document-service-2.0.1.jar",
+                "data2": "/app/service/document-service-2.0.1.jar"
+            },
+            {
+                "type": "cmd",
+                "data": "java -version"
+            },
+            {
+                "type": "cmd",
+                "data": "/app/service/deploy.sh document 2.0.1"
+            }
+        ]
+    },
+    "interface-service_xc_dev_idc": {
+        "ip": [
+            "10.180.23.90:31000",
+            "10.180.23.89:31000"
+        ],
+        "flow": [
+            {
+                "type": "localCmd",
+                "data": "cd /Users/jiahe/workspace/devops-interface-service/ && git checkout xc_dev_idc"
+            },
+            {
+                "type": "localCmd",
+                "data": "cd /Users/jiahe/workspace/devops-interface-service/ && /Users/jiahe/ruanjian/apache-maven-3.8.4-tt/bin/mvn clean package -DskipTests -s /Users/jiahe/ruanjian/apache-maven-3.8.4-tt/conf/settings.xml"
+            },
+            {
+                "type": "up",
+                "data": "/Users/jiahe/workspace/devops-interface-service/target/interface-service-2.0.1.jar",
+                "data2": "/app/service/interface-service-2.0.1.jar"
+            },
+            {
+                "type": "cmd",
+                "data": "java -version"
+            },
+            {
+                "type": "cmd",
+                "data": "/app/service/deploy.sh interface 2.0.1"
+            }
+        ]
+    },
+    "develop-service_xc_devidc": {
+        "ip": [
+            "10.180.23.87:31000",
+            "10.180.23.88:31000"
+        ],
+        "flow": [
+            {
+                "type": "localCmd",
+                "data": "java -version"
+            },
+            {
+                "type": "localCmd",
+                "data": "cd /Users/jiahe/workspace/develops-service && git checkout xc_dev_idc"
+            },
+            {
+                "type": "localCmd",
+                "data": "cd /Users/jiahe/workspace/develops-service && /Users/jiahe/ruanjian/apache-maven-3.8.4-tt/bin/mvn clean package -DskipTests -s /Users/jiahe/ruanjian/apache-maven-3.8.4-tt/conf/settings.xml"
+            },
+            {
+                "type": "up",
+                "data": "/Users/jiahe/workspace/develops-service/target/develop-service-2.0.1.jar",
+                "data2": "/app/service/develop-service-2.0.1.jar"
+            },
+            {
+                "type": "cmd",
+                "data": "/app/service/deploy.sh develop 2.0.1"
+            }
+        ]
+    },
+    "demand-service_xc_dev_idc": {
+        "ip": [
+            "10.180.23.87:31000",
+            "10.180.23.88:31000"
+        ],
+        "flow": [
+            {
+                "type": "localCmd",
+                "data": "java -version"
+            },
+            {
+                "type": "localCmd",
+                "data": "cd /Users/jiahe/workspace/demand-service/ && git checkout xc_dev_idc"
+            },
+            {
+                "type": "localCmd",
+                "data": "cd /Users/jiahe/workspace/demand-service/ && /Users/jiahe/ruanjian/apache-maven-3.8.4-tt/bin/mvn clean package -DskipTests -s /Users/jiahe/ruanjian/apache-maven-3.8.4-tt/conf/settings.xml"
+            },
+            {
+                "type": "up",
+                "data": "/Users/jiahe/workspace/demand-service/target/demand-service-2.0.1.jar",
+                "data2": "/app/service/demand-service-2.0.1.jar"
+            },
+            {
+                "type": "cmd",
+                "data": "/app/service/deploy.sh demand 2.0.1"
+            }
+        ]
+    },
+    "demand-service_master": {
+        "ip": [
+            "10.180.23.87:31000",
+            "10.180.23.88:31000"
+        ],
+        "flow": [
+            {
+                "type": "localCmd",
+                "data": "java -version"
+            },
+            {
+                "type": "localCmd",
+                "data": "cd /Users/jiahe/workspace/demand-service/ && git checkout master"
+            },
+            {
+                "type": "localCmd",
+                "data": "cd /Users/jiahe/workspace/demand-service/ && /Users/jiahe/ruanjian/apache-maven-3.8.4-tt/bin/mvn clean package -DskipTests -s /Users/jiahe/ruanjian/apache-maven-3.8.4-tt/conf/settings.xml"
+            },
+            {
+                "type": "up",
+                "data": "/Users/jiahe/workspace/demand-service/target/demand-service-2.0.1.jar",
+                "data2": "/app/service/demand-service-2.0.1.jar"
+            },
+            {
+                "type": "cmd",
+                "data": "/app/service/deploy.sh demand 2.0.1"
+            }
+        ]
+    },
+    "test": {
+        "ip": [
+            "10.180.23.84:31000"
+        ],
+        "flow": [
+            {
+                "type": "localCmd",
+                "data": "java -version"
+            },
+                        {
+                "type": "cmd",
+                "data": "pwd"
+            }
+        ]
+    }
+    ,
+        "ls-test": {
+        "ip": [
+            "10.180.23.87:31000",
+            "10.180.23.88:31000"
+        ],
+        "flow": [
+            {
+                "type": "cmd",
+                "data": "ls -lts /app/service/"
+            }
+        ]
+    }
+
+        ,
+        "92-ll": {
+        "ip": [
+            "10.180.23.92:31000"
+        ],
+        "flow": [
+            {
+                "type": "cmd",
+                "data": "ls -lstr /app/service/"
+            }
+            
+
+        ]
+    }
+}

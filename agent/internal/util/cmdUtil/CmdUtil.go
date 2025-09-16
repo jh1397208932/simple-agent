@@ -4,16 +4,20 @@ import (
 	"bufio"
 	"context"
 	"fmt"
+	"io"
+	"os"
 	"os/exec"
 	"runtime"
-
-	"github.com/jhUtil/simple-agent-go/internal/util/errorUtil"
+	"sync"
 )
 
-// CrossPlatformExec 跨平台执行命令 (同步执行 全部执行完在整体响应)
+// CrossPlatformExec 跨平台执行命令 (同步执行)
 func CrossPlatformExec(command string) (string, error) {
-	var cmd *exec.Cmd
+	if command == "" {
+		return "", fmt.Errorf("命令不能为空")
+	}
 
+	var cmd *exec.Cmd
 	switch runtime.GOOS {
 	case "darwin": // macOS
 		cmd = exec.Command("zsh", "-c", command)
@@ -22,30 +26,23 @@ func CrossPlatformExec(command string) (string, error) {
 	case "windows":
 		cmd = exec.Command("cmd.exe", "/C", command)
 	default:
-		return "", errorUtil.NewF("未适配该平台: %s", runtime.GOOS)
+		return "", fmt.Errorf("未适配该平台: %s", runtime.GOOS)
 	}
 
-	// 捕获输出
 	output, err := cmd.CombinedOutput()
 	return string(output), err
 }
 
-// CommandExecutor 跨平台命令执行器
-// type CommandExecutor struct{}
-
-// NewCommandExecutor 创建新的命令执行器
-// func NewCommandExecutor() *CommandExecutor {
-// 	return &CommandExecutor{}
-// }
-
 // StreamCommand 流式执行命令并将输出发送到通道
 func StreamCommand(ctx context.Context, command string, output chan<- string) error {
-	defer close(output)
 
-	// 确定平台和对应的shell
+	if command == "" {
+		return fmt.Errorf("命令不能为空")
+	}
+
 	var cmd *exec.Cmd
 	switch runtime.GOOS {
-	case "darwin": // macOS
+	case "darwin":
 		cmd = exec.CommandContext(ctx, "zsh", "-c", command)
 	case "linux":
 		cmd = exec.CommandContext(ctx, "bash", "-c", command)
@@ -55,57 +52,131 @@ func StreamCommand(ctx context.Context, command string, output chan<- string) er
 		return fmt.Errorf("unsupported platform: %s", runtime.GOOS)
 	}
 
-	// 获取标准输出管道
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
-		return fmt.Errorf("error creating stdout pipe: %v", err)
+		return fmt.Errorf("创建 stdout 管道失败")
 	}
-
-	// 获取标准错误管道
+	defer stdout.Close()
 	stderr, err := cmd.StderrPipe()
 	if err != nil {
-		return fmt.Errorf("error creating stderr pipe: %v", err)
+		stdout.Close()
+		return fmt.Errorf("创建 stderr 管道失败")
 	}
+	defer stderr.Close()
 
-	// 启动命令
 	if err := cmd.Start(); err != nil {
-		return fmt.Errorf("error starting command: %v", err)
+		stdout.Close()
+		stderr.Close()
+		return fmt.Errorf("命令启动失败")
 	}
 
-	// 创建扫描器读取输出
-	stdoutScanner := bufio.NewScanner(stdout)
-	stderrScanner := bufio.NewScanner(stderr)
-
-	// 创建协程处理标准输出
+	//stdoutScanner := bufio.NewScanner(stdout)
+	//stderrScanner := bufio.NewScanner(stderr)
+	var wg sync.WaitGroup
+	wg.Add(1)
 	go func() {
-		for stdoutScanner.Scan() {
-			select {
-			case <-ctx.Done():
-				return
-			default:
-				output <- stdoutScanner.Text()
+		defer wg.Done()
+		reader := bufio.NewReader(stdout)
+		buffer := make([]byte, 1024)
+
+		for {
+			n, err := reader.Read(buffer)
+			if n > 0 {
+				select {
+				case <-ctx.Done():
+
+				default:
+					output <- string(buffer[:n])
+				}
+			}
+			if err != nil {
+				fmt.Println("标准输出结束")
+				if err == io.EOF {
+					break
+				}
+				fmt.Println("Error:", err)
+				break
 			}
 		}
+		// for stdoutScanner.Scan() {
+		// 	select {
+		// 	case <-ctx.Done():
+		// 		return
+		// 	case output <- stdoutScanner.Text():
+		// 	}
+		// }
 	}()
-
-	// 创建协程处理标准错误
+	wg.Add(1)
 	go func() {
-		for stderrScanner.Scan() {
-			select {
-			case <-ctx.Done():
-				return
-			default:
-				output <- "[ERROR] " + stderrScanner.Text()
+
+		defer wg.Done()
+		reader := bufio.NewReader(stderr)
+		buffer := make([]byte, 1024)
+
+		for {
+			n, err := reader.Read(buffer)
+			if n > 0 {
+				select {
+				case <-ctx.Done():
+
+				default:
+					output <- string(buffer[:n])
+				}
+			}
+			if err != nil {
+				fmt.Println("异常输出结束")
+				if err == io.EOF {
+					break
+				}
+				fmt.Println("Error:", err)
+				break
 			}
 		}
+		// for stderrScanner.Scan() {
+		// 	select {
+		// 	case <-ctx.Done():
+		// 		return
+		// 	case output <- stderrScanner.Text():
+		// 	}
+		// }
 	}()
 
-	// 等待命令完成
-	if err := cmd.Wait(); err != nil {
-		output <- fmt.Sprintf("命令执行完成，退出状态: %v", err)
-		return err
+	// 监听上下文取消，强制终止命令
+	go func() {
+
+		<-ctx.Done()
+		fmt.Println("上下文结束 优雅停止命令终端")
+		if cmd.Process != nil {
+			// 尝试优雅终止
+			if err := cmd.Process.Signal(os.Interrupt); err != nil {
+				// 如果失败，强制杀掉进程
+				cmd.Process.Kill()
+			}
+		}
+
+	}()
+
+	err = cmd.Wait()
+	//等待命令输出相应
+	wg.Wait()
+
+	if err != nil {
+		select {
+		case <-ctx.Done():
+
+		default:
+			output <- "命令执行失败"
+		}
+
 	} else {
-		output <- "命令执行完成，退出状态: 0"
+		select {
+		case <-ctx.Done():
+
+		default:
+			output <- "命令执行完成"
+		}
+
 	}
+	fmt.Println("正常执行结束")
 	return nil
 }

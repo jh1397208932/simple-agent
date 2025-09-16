@@ -1,0 +1,28 @@
+{
+       
+
+      "test": {
+        "ip": [
+            
+            "127.0.0.1:31000"
+        ],
+        "flow": [
+
+            {
+                "type": "up",
+                "data": "/Users/jiahe/临时文件/flow-service-2.0.5.jar",
+                "data2": "/Users/jiahe/Downloads/未命名文件夹 2/"
+            },
+            {
+                "type": "cmd",
+                "data": "java -version"
+            },
+            {
+                "type": "cmd",
+                "data": "tail -n 300 -f /Users/jiahe/Downloads/未命名.txt"
+            }
+        ]
+    }
+
+
+}
